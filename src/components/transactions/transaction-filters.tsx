@@ -150,15 +150,20 @@ export function TransactionFilters({ categories }: { categories: Category[] }) {
 
         {/*
           A plain anchor, deliberately. The route handler sets
-          Content-Disposition: attachment, so the browser downloads the stream and stays on the
+          Content-Disposition: attachment, so the browser downloads the file and stays on the
           page — no JavaScript, and nothing buffers the response into memory. Pulling it through
-          fetch() would defeat the streaming the backend does specifically to keep a large export
-          off the heap.
+          fetch() into a blob would hold the whole workbook in the tab's memory before saving it,
+          and would also break in the published-artifact sandbox where script-driven downloads
+          are inert.
+
+          Downloads an .xlsx. No `download` attribute filename here on purpose: the server's
+          Content-Disposition names the file with the export's date, and a hardcoded name here
+          would override it with a stale one.
         */}
         <Button variant="outline" asChild>
           <a href="/api/transactions/export" download>
             <Download data-icon="inline-start" />
-            Export
+            Export to Excel
           </a>
         </Button>
       </div>

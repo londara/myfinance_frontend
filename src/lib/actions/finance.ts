@@ -113,6 +113,31 @@ export async function createBudget(
   }
 }
 
+/**
+ * PUT /api/budgets/{id}.
+ *
+ * The backend answers 204 with no body, so unlike createBudget there is nothing to return and the
+ * caller re-renders from the revalidated page instead of from a response.
+ *
+ * NOTE: the backend ignores `categoryId` on update — a budget cannot be moved to another
+ * category, only edited in place. It is still sent because the request DTO requires it. The edit
+ * dialog therefore shows the category as read-only rather than offering a picker that would appear
+ * to work and silently do nothing.
+ */
+export async function updateBudget(
+  id: string,
+  input: BudgetInput,
+): Promise<ActionResult> {
+  try {
+    await api.put(`/api/budgets/${id}`, input);
+    revalidatePath(routes.budgets);
+    revalidatePath(routes.dashboard);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return failure(error, "Could not update the budget.");
+  }
+}
+
 export async function deleteBudget(id: string): Promise<ActionResult> {
   try {
     await api.delete(`/api/budgets/${id}`);
@@ -161,6 +186,27 @@ export async function contributeToGoal(
     return { ok: true, data: updated };
   } catch (error) {
     return failure(error, "Could not record the contribution.");
+  }
+}
+
+/**
+ * PUT /api/goals/{id}.
+ *
+ * Returns the updated goal rather than void: the backend recomputes `status` against the new
+ * target, so raising the target of a reached goal drops it back to ACTIVE. The caller needs that
+ * to avoid leaving a stale "Reached" badge on the card.
+ */
+export async function updateGoal(
+  id: string,
+  input: GoalInput,
+): Promise<ActionResult<Goal>> {
+  try {
+    const updated = await api.put<Goal>(`/api/goals/${id}`, input);
+    revalidatePath(routes.goals);
+    revalidatePath(routes.dashboard);
+    return { ok: true, data: updated };
+  } catch (error) {
+    return failure(error, "Could not update the goal.");
   }
 }
 

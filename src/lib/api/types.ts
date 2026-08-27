@@ -136,6 +136,9 @@ export type BudgetStatus = {
   remaining: number;
   usedPercent: number;
   tone: BudgetTone;
+  /* Stored settings, echoed back so the edit dialog can prefill rather than reset them. */
+  notifyEnabled: boolean;
+  notifyThresholdPct: number;
 };
 
 export type BudgetRollup = {
@@ -152,6 +155,9 @@ export type GoalStatus = "ACTIVE" | "REACHED" | "ARCHIVED";
 export type Goal = {
   id: string;
   name: string;
+  /* Echoed back by the API so the edit dialog can prefill instead of overwriting them. */
+  categoryId?: string;
+  description?: string;
   icon?: string;
   target: number;
   saved: number;

@@ -66,7 +66,7 @@ container is listening. That fallback was a trap — it makes a broken deploy lo
 | Filters | URL search params, so the server re-renders | [transactions/page.tsx](<src/app/(app)/transactions/page.tsx>) |
 | Route guard | `proxy.ts` (Next 16 renamed `middleware.ts`) | [src/proxy.ts](src/proxy.ts) |
 | Live notifications | SSE through a same-origin route proxy | [api/notifications/stream](src/app/api/notifications/stream/route.ts) |
-| CSV/NDJSON export | Streamed through a route proxy | [api/transactions/export](src/app/api/transactions/export/route.ts) |
+| Excel export | `.xlsx` piped through a route proxy | [api/transactions/export](src/app/api/transactions/export/route.ts) |
 
 ### Four decisions worth knowing
 
@@ -83,6 +83,13 @@ omits the tenant. Caching happens in the backend's Redis instead, keyed per user
 **Filters live in the URL.** `?search=coffee&page=2` re-renders the Server Component against a new
 backend query, so a filtered view is shareable, bookmarkable, survives a refresh and works with the
 back button. `useState` would have needed a client data layer and given up all four.
+
+**The Export button downloads a real `.xlsx`, not JSON.** The backend keeps its streamed
+NDJSON endpoint for API clients — it is the clearest example of an incremental `Flux` — but a
+`.jsonl` file is not something anyone can open. The workbook is built by Apache POI on the
+backend, where the data already is, and piped through the route proxy unbuffered. Building it
+in this Next process instead would have meant holding the whole thing in the heap of the
+smaller of the two services.
 
 **Two route handlers exist only to attach the credential.** `EventSource` cannot set an
 `Authorization` header, and neither can a plain download navigation. Both proxies read the httpOnly

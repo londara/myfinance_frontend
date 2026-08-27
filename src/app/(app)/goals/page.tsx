@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { GoalCardActions } from "@/components/goals/goal-card-actions";
 import { AddGoalDialog } from "@/components/modals/add-goal-dialog";
 import { Meter } from "@/components/shared/meter";
 import { Money } from "@/components/shared/money";
@@ -71,11 +72,20 @@ export default async function GoalsPage() {
                 <span className="flex size-12 items-center justify-center rounded-full bg-brand-fixed text-brand-container">
                   <Icon className="size-6" aria-hidden />
                 </span>
-                {goal.status === "REACHED" ? (
-                  <span className="rounded-full bg-success/10 px-2.5 py-1 text-label-md font-semibold text-success">
-                    Reached
-                  </span>
-                ) : null}
+
+                {/*
+                  The badge and the menu share the right side. `items-center` on this row rather
+                  than inheriting the header's `items-start`, so the badge lines up with the middle
+                  of the menu button instead of its top edge.
+                */}
+                <div className="flex items-center gap-1">
+                  {goal.status === "REACHED" ? (
+                    <span className="rounded-full bg-success/10 px-2.5 py-1 text-label-md font-semibold text-success">
+                      Reached
+                    </span>
+                  ) : null}
+                  <GoalCardActions goal={goal} categories={categories} />
+                </div>
               </div>
 
               <div className="mb-4 flex-1">

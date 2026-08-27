@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { BudgetCardActions } from "@/components/budgets/budget-card-actions";
 import { CreateBudgetDialog } from "@/components/modals/create-budget-dialog";
 import { Meter } from "@/components/shared/meter";
 import { Money } from "@/components/shared/money";
@@ -118,6 +119,13 @@ export default async function BudgetsPage() {
                       {budget.category}
                     </h2>
                   </div>
+
+                  {/*
+                    The card's only client island. `available` is passed for prop-shape parity with
+                    the create flow; the edit dialog shows the category read-only because the
+                    backend's update cannot move a budget between categories.
+                  */}
+                  <BudgetCardActions budget={budget} categories={available} />
                 </div>
 
                 <div className="mb-1.5 flex items-baseline justify-between gap-2">
