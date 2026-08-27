@@ -17,6 +17,7 @@ repository. This covers this Next.js app only.
 | `BACKEND_URL` is required | [`../src/lib/api/client.ts`](../src/lib/api/client.ts) | Forgetting it fails the **build** with a message naming the variable, rather than silently targeting the container's own `localhost:8080`. |
 | Node pinned | [`../.node-version`](../.node-version) | 22. Without it a platform upgrade changes the runtime under you between deploys. |
 | `.env.example` committed | [`../.env.example`](../.env.example) | The default Next `.gitignore` has `.env*`, which hides the example too. Now un-ignored — it is the only record of what a deploy needs. |
+| Build toolchain in `dependencies` | `package.json` | Render prunes devDependencies for the build. The six packages `next build` executes were moved so pruning cannot remove them. |
 | `next start` reads `PORT` | `package.json` | No `-p` flag: `next start` honours `process.env.PORT` on its own, and a `${PORT:-3000}` shell default in an npm script would break on Windows. |
 
 Nothing here needs a Dockerfile. The backend needs one because Render's non-Java
@@ -70,23 +71,55 @@ Render dashboard → **New +** → **Web Service** → connect this repository.
 so a deploy cannot quietly resolve a different dependency tree than the one you
 tested.
 
-**`--include=dev` is required, not defensive.** Building a Next app *uses* its
-devDependencies: `tailwindcss`, `@tailwindcss/postcss`, `typescript` and the
-`@types/*` packages are build-time tools. If `NODE_ENV=production` is set for the
-build — Render's Node runtime tends to, and it is easy to add by hand — npm reads
-that as `omit=dev` and prunes them, and the build fails with:
+`--include=dev` is stated for clarity, but it is **not** what makes this work —
+see the next section.
+
+**Region matters.** Every page render makes server-to-server calls to the
+backend, so a cross-region hop is paid on *every request*, not once.
+
+---
+
+## Why the build toolchain lives in `dependencies`
+
+Render's Node runtime sets `NODE_ENV=production` for the build, and npm reads
+that as `omit=dev`. Measured on this project, `NODE_ENV=production npm ci`
+removes **246 packages** — including everything `next build` needs to run. The
+build then fails with:
 
 ```
 Cannot find module '@tailwindcss/postcss'
 ```
 
-which reads like a missing dependency rather than a pruned one. Measured on this
-project: `NODE_ENV=production npm ci` removes **246 packages**; adding
-`--include=dev` removes none. The flag overrides `NODE_ENV`, so the build is
-correct either way.
+which reads like a missing dependency rather than a pruned one.
 
-**Region matters.** Every page render makes server-to-server calls to the
-backend, so a cross-region hop is paid on *every request*, not once.
+Adding `--include=dev` to the build command fixes it — *if the build command is
+one you control*. It is not, for a service created by hand: such a service
+ignores `render.yaml` completely and keeps whatever Build Command sits in its
+dashboard. That leaves one edit in a web form standing between the repository and
+a working deploy, and nothing in the repository can enforce it.
+
+So the six packages `next build` executes were moved into `dependencies`:
+
+| Package | Why the build needs it |
+| --- | --- |
+| `@tailwindcss/postcss` | The PostCSS plugin `postcss.config.mjs` loads to compile `globals.css` |
+| `tailwindcss` | The engine that plugin drives |
+| `typescript` | `next build` typechecks, and `next.config.ts` is itself TypeScript |
+| `@types/node`, `@types/react`, `@types/react-dom` | Needed for that typecheck to pass |
+
+**Do not move them back.** The dependencies / devDependencies split assumes the
+build happens somewhere dev dependencies exist. On a host that prunes them
+*before* building, the distinction is not merely unhelpful, it is wrong: if the
+build runs it, it is a dependency.
+
+Only `eslint` and `eslint-config-next` remain dev-only — `next build` does not
+lint, so they are genuinely not needed to produce a deploy.
+
+Verified by A/B in an isolated copy, both installed with
+`NODE_ENV=production npm ci` so devDependencies were pruned:
+
+- previous `package.json` → `Cannot find module '@tailwindcss/postcss'`
+- current `package.json` → build completes, same route table
 
 ---
 
@@ -174,7 +207,7 @@ registration seeds 19 default categories for the new account.
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | Build fails: `BACKEND_URL is not set` | The variable is missing from the service environment | Add it. This failure is deliberate — see step 3 |
-| Build fails: `Cannot find module '@tailwindcss/postcss'` | `NODE_ENV=production` was set for the build, so `npm ci` pruned devDependencies — which is where the whole build toolchain lives | Use `npm ci --include=dev`, and do not set `NODE_ENV` as a service variable. If you created the service **by hand**, fix the Build Command in the dashboard — `render.yaml` does not apply to it |
+| Build fails: `Cannot find module '@tailwindcss/postcss'` | The build ran with devDependencies pruned (`NODE_ENV=production` makes npm `omit=dev`) while that package was in `devDependencies` | Fixed in the repository: the six build-time packages are in `dependencies`, where pruning cannot reach them. Seeing this again means someone moved them back |
 | Build fails in `npm ci`: lockfile out of sync | `package.json` was edited without updating `package-lock.json` | Run `npm install` locally, commit the lockfile |
 | Every page shows an error; logs show `ECONNREFUSED 127.0.0.1:8080` | An older build with the `localhost` fallback still deployed | Redeploy. The fallback now only applies outside production |
 | First page load takes ~50s, then works | The **backend** free instance was asleep and had to cold start | Expected. Paid backend, or accept it |

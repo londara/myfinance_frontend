@@ -27,15 +27,19 @@ services:
     # pins and fails if the lockfile and package.json disagree, so a deploy can
     # never quietly resolve a different dependency tree than the one tested.
     #
-    # `--include=dev` is REQUIRED, not defensive. Building a Next app needs its
-    # devDependencies — tailwindcss, @tailwindcss/postcss, typescript, @types/*
-    # are all build-time tools. If anything sets NODE_ENV=production for the
-    # build, npm resolves `omit=dev` and drops them, and the build dies with:
+    # `--include=dev` is belt to the braces in package.json.
     #
-    #     Cannot find module '@tailwindcss/postcss'
+    # The braces: the six packages `next build` actually executes — tailwindcss,
+    # @tailwindcss/postcss, typescript and the three @types/* — live in
+    # `dependencies`, not `devDependencies`, so no amount of pruning can remove
+    # them. See the note in README.md; do not "tidy" them back.
     #
-    # which reads like a missing dependency rather than a pruned one. The flag
-    # wins over NODE_ENV, so the build is correct either way.
+    # Why both: a Render service created by hand ignores this file entirely, and
+    # its dashboard Build Command may well be a plain `npm ci`. Under
+    # NODE_ENV=production npm reads that as `omit=dev` and the build dies on
+    # `Cannot find module '@tailwindcss/postcss'` — which reads like a missing
+    # dependency rather than a pruned one. The package.json split fixes that case
+    # too; this flag just makes the intent explicit where the config is read.
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
 

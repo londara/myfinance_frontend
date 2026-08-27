@@ -162,6 +162,14 @@ Short version: a **Node** service, `npm ci --include=dev && npm run build` / `np
 repository's root is the app), health check `/api/health`, and one environment variable —
 `BACKEND_URL`. [`render.yaml`](render.yaml) declares all of it if you deploy as a Blueprint.
 
+**`tailwindcss`, `@tailwindcss/postcss`, `typescript` and the `@types/*` packages are in `dependencies`,
+not `devDependencies`, on purpose.** Render sets `NODE_ENV=production` for the build, npm reads
+that as `omit=dev`, and `npm ci` then prunes 246 packages — including everything `next build`
+runs. The build fails on `Cannot find module '@tailwindcss/postcss'`, which looks like a
+missing dependency rather than a pruned one. Moving them is the only fix that does not depend on a
+Build Command typed into a web form. Please do not move them back. `eslint` stays dev-only,
+because `next build` does not lint.
+
 The health endpoint deliberately does **not** call the backend: a liveness check that depends on
 another service lets that service's downtime take this one with it, when in fact every static page
 still renders.
