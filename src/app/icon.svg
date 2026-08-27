@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    The app icon. Next's `icon.svg` file convention emits the <link rel="icon"> automatically, so
+    no /favicon.ico request is made and the console 404 goes away.
+
+    The mark matches the sidebar: the brand square with an "M", in Deep Slate (#091426) from
+    DESIGN.md. Deliberately single-theme — a browser tab has no theme signal to respond to, and a
+    mark that changes with the OS theme is harder to recognise, not easier.
+  -->
+  <rect width="32" height="32" rx="7" fill="#091426"/>
+  <path
+    d="M8 22.5V9.5h3.1l4.9 7.4 4.9-7.4H24v13h-3.05v-7.9L16.6 21h-1.2l-4.35-6.4v7.9Z"
+    fill="#ffffff"/>
+</svg>

@@ -1,0 +1,370 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * MyFinance design system
+ * Source of truth: stitch_myfinance_desktop_dashboard_ux_ui/myfinance/DESIGN.md
+ * "Modern Corporate Minimalism" — Deep Slate on a cool grey canvas, white cards,
+ * 16px card radius, 8px control radius, Inter with tabular figures for money.
+ *
+ * Every color is declared as a plain custom property under `:root` and restated
+ * under `.dark`; `@theme inline` only maps them to utility names. The dark set is
+ * a *selected* palette stepped for the dark surface, not an inversion of light.
+ */
+
+@theme inline {
+  /* ---- shadcn/ui token bridge ------------------------------------------ */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* ---- MyFinance surfaces & ink ---------------------------------------- */
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-lowest: var(--surface-lowest);
+  --color-surface-low: var(--surface-low);
+  --color-surface-mid: var(--surface-mid);
+  --color-surface-high: var(--surface-high);
+  --color-surface-highest: var(--surface-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+
+  --color-brand: var(--brand);
+  --color-brand-container: var(--brand-container);
+  --color-on-brand-container: var(--on-brand-container);
+  --color-brand-fixed: var(--brand-fixed);
+  --color-brand-fixed-dim: var(--brand-fixed-dim);
+
+  --color-slate-ink: var(--slate-ink);
+  --color-slate-soft: var(--slate-soft);
+
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-container: var(--danger-container);
+
+  /* ---- Typography scale (DESIGN.md) ------------------------------------ */
+  --text-display-lg: 48px;
+  --text-display-lg--line-height: 56px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 700;
+
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 600;
+
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--font-weight: 600;
+
+  --text-title-lg: 20px;
+  --text-title-lg--line-height: 28px;
+  --text-title-lg--font-weight: 600;
+
+  --text-title-md: 16px;
+  --text-title-md--line-height: 24px;
+  --text-title-md--font-weight: 600;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 400;
+
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-body-md--font-weight: 400;
+
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.05em;
+  --text-label-md--font-weight: 500;
+
+  --text-data: 14px;
+  --text-data--line-height: 20px;
+  --text-data--font-weight: 500;
+
+  /* ---- Layout rhythm (DESIGN.md) --------------------------------------- */
+  --spacing-gutter: 1.5rem;
+  --spacing-edge: 2rem;
+  --spacing-stack-sm: 0.5rem;
+  --spacing-stack-md: 1rem;
+  --spacing-stack-lg: 2rem;
+  --spacing-sidebar: 280px;
+  --container-shell: 1440px;
+
+  --radius-card: 16px;
+
+  /* ---- Elevation (DESIGN.md) ------------------------------------------- */
+  --shadow-level-1: var(--elevation-1);
+  --shadow-level-1-hover: var(--elevation-1-hover);
+  --shadow-level-2: var(--elevation-2);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------------ light -- */
+
+:root {
+  color-scheme: light;
+
+  --background: #f7f9fb;
+  --foreground: #191c1e;
+  --card: #ffffff;
+  --card-foreground: #191c1e;
+  --popover: #ffffff;
+  --popover-foreground: #191c1e;
+
+  /* Primary action = Deep Slate */
+  --primary: #1e293b;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f2f4f6;
+  --secondary-foreground: #191c1e;
+  --muted: #f2f4f6;
+  --muted-foreground: #45474c;
+  --accent: #eceef0;
+  --accent-foreground: #091426;
+
+  --destructive: #ba1a1a;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #1e293b;
+
+  --surface: #f7f9fb;
+  --surface-dim: #d8dadc;
+  --surface-bright: #ffffff;
+  --surface-lowest: #ffffff;
+  --surface-low: #f2f4f6;
+  --surface-mid: #eceef0;
+  --surface-high: #e6e8ea;
+  --surface-highest: #e0e3e5;
+  --on-surface: #191c1e;
+  --on-surface-variant: #45474c;
+
+  --brand: #091426;
+  --brand-container: #1e293b;
+  --on-brand-container: #ffffff;
+  --brand-fixed: #d8e3fb;
+  --brand-fixed-dim: #bcc7de;
+
+  --slate-ink: #525f71;
+  --slate-soft: #d6e3f9;
+
+  --outline: #75777d;
+  --outline-variant: #e2e8f0;
+
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #ba1a1a;
+  --danger-container: #ffdad6;
+
+  --elevation-1: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  --elevation-1-hover: 0 6px 10px -2px rgb(0 0 0 / 0.08);
+  --elevation-2: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+
+  --scrollbar-thumb: #cbd5e1;
+
+  /* Auth brand panel — the one solid field in the app */
+  --auth-panel: #091426;
+  --auth-panel-edge: transparent;
+
+  /* Chart roles — see src/lib/viz.ts */
+  --viz-brand: #1e293b;
+  --viz-brand-soft: #525f71;
+  --viz-series-1: #2a78d6;
+  --viz-series-2: #eb6834;
+  --viz-series-3: #1baf7a;
+  --viz-series-4: #eda100;
+  --viz-series-5: #e87ba4;
+  --viz-good: #1baf7a;
+  --viz-critical: #e34948;
+  --viz-grid: #e2e8f0;
+  --viz-surface: #ffffff;
+
+  --radius: 0.5rem;
+}
+
+/* ------------------------------------------------------------------- dark -- */
+
+.dark {
+  color-scheme: dark;
+
+  --background: #0a111e;
+  --foreground: #e6eaf2;
+  --card: #131b2b;
+  --card-foreground: #e6eaf2;
+  --popover: #1a2333;
+  --popover-foreground: #e6eaf2;
+
+  /* On a dark canvas the action reads light — DESIGN.md `inverse-primary` */
+  --primary: #bcc7de;
+  --primary-foreground: #111c2d;
+
+  --secondary: #1a2333;
+  --secondary-foreground: #e6eaf2;
+  --muted: #1a2333;
+  --muted-foreground: #a2adc0;
+  --accent: #202a3c;
+  --accent-foreground: #e6eaf2;
+
+  --destructive: #ffb4ab;
+
+  --border: #2a3547;
+  --input: #2a3547;
+  --ring: #bcc7de;
+
+  --surface: #0a111e;
+  --surface-dim: #070d17;
+  --surface-bright: #1a2333;
+  --surface-lowest: #131b2b;
+  --surface-low: #1a2333;
+  --surface-mid: #202a3c;
+  --surface-high: #273248;
+  --surface-highest: #2f3b53;
+  --on-surface: #e6eaf2;
+  --on-surface-variant: #a2adc0;
+
+  --brand: #e6eaf2;
+  --brand-container: #bcc7de;
+  --on-brand-container: #111c2d;
+  --brand-fixed: #24304a;
+  --brand-fixed-dim: #2c3a58;
+
+  --slate-ink: #a2adc0;
+  --slate-soft: #24304a;
+
+  --outline: #6b7689;
+  --outline-variant: #2a3547;
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #ffb4ab;
+  --danger-container: #93000a;
+
+  /* Depth on dark comes from tonal layering; shadows stay tight and darker */
+  --elevation-1: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+  --elevation-1-hover: 0 6px 12px -2px rgb(0 0 0 / 0.55);
+  --elevation-2: 0 10px 20px -3px rgb(0 0 0 / 0.6);
+
+  --scrollbar-thumb: #33405a;
+
+  /* Lifted off the dark canvas so the two-panel split still reads */
+  --auth-panel: #18233a;
+  --auth-panel-edge: #2a3547;
+
+  /* Dark chart steps, validated against the #131b2b card surface */
+  --viz-brand: #bcc7de;
+  --viz-brand-soft: #8b9ab5;
+  --viz-series-1: #3987e5;
+  --viz-series-2: #d95926;
+  --viz-series-3: #199e70;
+  --viz-series-4: #c98500;
+  --viz-series-5: #d55181;
+  --viz-good: #199e70;
+  --viz-critical: #e66767;
+  --viz-grid: #2a3547;
+  --viz-surface: #131b2b;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11";
+  }
+
+  /* Money and metrics must align vertically in columns (DESIGN.md) */
+  .tnum,
+  th[data-numeric],
+  td[data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+@layer components {
+  /* Level 1 surface — the primary unit of every screen */
+  .fin-card {
+    @apply rounded-card border border-border bg-card shadow-[var(--shadow-level-1)];
+  }
+
+  .fin-card-interactive {
+    @apply rounded-card border border-border bg-card shadow-[var(--shadow-level-1)] transition-shadow duration-200 hover:shadow-[var(--shadow-level-1-hover)];
+  }
+
+  /* Table header row: label-md on the low surface */
+  .fin-th {
+    @apply bg-surface-low p-4 text-left text-label-md font-semibold tracking-wider text-on-surface-variant uppercase;
+  }
+
+  .fin-td {
+    @apply p-4 align-middle text-body-md;
+  }
+
+  /* Field label — positioned above the input */
+  .fin-label {
+    @apply text-label-md font-medium tracking-wider text-on-surface-variant uppercase;
+  }
+}
+
+/* Focused input: 1px brand border + a soft glow (DESIGN.md § Input Fields) */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[data-slot="select-trigger"]:focus-visible {
+  --tw-ring-color: color-mix(in oklch, var(--primary) 18%, transparent);
+}
+
+::selection {
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+}
+
+/* Calm, unobtrusive scrollbars for the dense data areas */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
