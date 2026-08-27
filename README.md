@@ -48,8 +48,13 @@ cd ../backend && mvn spring-boot:run   # :8080
 cd ../web     && npm run dev           # :3000
 ```
 
-`BACKEND_URL` in `.env.local` points at the API. It is **not** `NEXT_PUBLIC_`, because the browser
-never calls the backend directly.
+`BACKEND_URL` in `.env.local` points at the API — see [`.env.example`](.env.example). It is **not**
+`NEXT_PUBLIC_`, because the browser never calls the backend directly.
+
+Outside development it is **required**: a missing `BACKEND_URL` fails the build with a message
+naming the variable rather than falling back to `localhost:8080`, where nothing on a deployed
+container is listening. That fallback was a trap — it makes a broken deploy look like a mysterious
+`ECONNREFUSED 127.0.0.1:8080` for a URL nobody configured.
 
 ### How data flows
 
@@ -148,3 +153,15 @@ resolved once, in favour of the dashboard screen and `DESIGN.md`:
 [src/lib/data.ts](src/lib/data.ts) holds the demo dataset transcribed from the
 designs. Swap that module for API calls to wire up a backend — nothing else
 reads from it directly.
+
+## Deploying
+
+See **[docs/DEPLOY-RENDER.md](docs/DEPLOY-RENDER.md)** for the step-by-step Render runbook.
+
+Short version: a **Node** service, `npm ci && npm run build` / `npm start`, no Root Directory (this
+repository's root is the app), health check `/api/health`, and one environment variable —
+`BACKEND_URL`. [`render.yaml`](render.yaml) declares all of it if you deploy as a Blueprint.
+
+The health endpoint deliberately does **not** call the backend: a liveness check that depends on
+another service lets that service's downtime take this one with it, when in fact every static page
+still renders.

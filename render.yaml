@@ -1,0 +1,54 @@
+# =============================================================================
+# Render Blueprint for the MyFinance frontend.
+#
+# Optional — everything here can be typed into the dashboard instead. Its value
+# is that the deploy configuration is reviewable and reproducible rather than
+# living only in a web form.
+#
+# To use it: Render dashboard -> New + -> Blueprint -> pick this repository.
+#
+# NOTE: this repository's root IS the Next.js app, so there is no rootDir. The
+# backend lives in a separate repository with its own Dockerfile.
+# =============================================================================
+
+services:
+  - type: web
+    name: myfinance-web
+    runtime: node
+    plan: free
+    branch: main
+
+    # Same region as the backend and its database (the Postgres host is
+    # *.oregon-postgres.render.com). Every page render makes server-to-server
+    # calls to the backend, so a cross-region hop would be paid on every request.
+    region: oregon
+
+    # `npm ci` not `npm install`: it installs exactly what package-lock.json
+    # pins and fails if the lockfile and package.json disagree, so a deploy can
+    # never quietly resolve a different dependency tree than the one tested.
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+
+    # Answered by src/app/api/health/route.ts, which deliberately does NOT call
+    # the backend — see the comment there. A health check that depended on the
+    # backend would let the backend spinning down take this service with it.
+    healthCheckPath: /api/health
+
+    envVars:
+      # The one variable this app actually needs. Server-side only: it is read
+      # in src/lib/api/client.ts and never shipped to the browser.
+      - key: BACKEND_URL
+        value: https://myfinance-backend-aidt.onrender.com
+
+      # Also pinned in .node-version, which Render reads on its own. Stated
+      # twice deliberately — the file covers anyone building locally or in CI,
+      # this covers reading the deploy config on its own.
+      - key: NODE_VERSION
+        value: "22"
+
+      # Next.js needs this to know it is a production build at runtime. Render
+      # sets it for Node services already; being explicit makes the httpOnly
+      # cookie's `secure` flag (session.ts) a stated decision rather than an
+      # inherited default, because it is what switches the flag on.
+      - key: NODE_ENV
+        value: production

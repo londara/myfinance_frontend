@@ -13,7 +13,34 @@ import type { ApiErrorBody } from "./types";
  * <p>Because these are server-to-server calls, **CORS never applies** and the token never reaches
  * the browser.
  */
-const BASE_URL = process.env.BACKEND_URL ?? "http://localhost:8080";
+/**
+ * The backend's base URL. Required in production, defaulted only for local development.
+ *
+ * The previous `?? "http://localhost:8080"` was a silent trap once deployed: forget
+ * `BACKEND_URL` on Render and every server-side fetch quietly targets the *container's own*
+ * localhost:8080, where nothing is listening. The result is a page that renders an unexplained
+ * error while the logs show `ECONNREFUSED 127.0.0.1:8080` — a URL nobody configured. The
+ * backend had the identical bug in its OpenAPI `servers` entry, and it cost real time.
+ *
+ * Failing at module load instead means a misconfigured deploy dies immediately with a message
+ * that names the variable, rather than half-working.
+ */
+function resolveBackendUrl(): string {
+  const configured = process.env.BACKEND_URL?.trim();
+  if (configured) {
+    // A trailing slash would double up in `${BASE_URL}${path}`.
+    return configured.replace(/\/+$/, "");
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "BACKEND_URL is not set. Point it at the Spring Boot API, e.g. " +
+        "BACKEND_URL=https://myfinance-backend-aidt.onrender.com",
+    );
+  }
+  return "http://localhost:8080";
+}
+
+const BASE_URL = resolveBackendUrl();
 
 /** Thrown for any non-2xx. Carries the backend's structured error body when there is one. */
 export class ApiError extends Error {
