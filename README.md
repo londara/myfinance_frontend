@@ -158,7 +158,7 @@ reads from it directly.
 
 See **[docs/DEPLOY-RENDER.md](docs/DEPLOY-RENDER.md)** for the step-by-step Render runbook.
 
-Short version: a **Node** service, `npm ci && npm run build` / `npm start`, no Root Directory (this
+Short version: a **Node** service, `npm ci --include=dev && npm run build` / `npm start`, no Root Directory (this
 repository's root is the app), health check `/api/health`, and one environment variable —
 `BACKEND_URL`. [`render.yaml`](render.yaml) declares all of it if you deploy as a Blueprint.
 

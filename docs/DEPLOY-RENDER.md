@@ -61,7 +61,7 @@ Render dashboard → **New +** → **Web Service** → connect this repository.
 | Region | **Same as the backend** (Oregon, if you kept the default) |
 | Branch | `main` |
 | Root Directory | *(leave empty — the repo root is the app)* |
-| Build Command | `npm ci && npm run build` |
+| Build Command | `npm ci --include=dev && npm run build` |
 | Start Command | `npm start` |
 | Health Check Path | `/api/health` |
 
@@ -69,6 +69,21 @@ Render dashboard → **New +** → **Web Service** → connect this repository.
 `package-lock.json` pins and fails if the lockfile and `package.json` disagree,
 so a deploy cannot quietly resolve a different dependency tree than the one you
 tested.
+
+**`--include=dev` is required, not defensive.** Building a Next app *uses* its
+devDependencies: `tailwindcss`, `@tailwindcss/postcss`, `typescript` and the
+`@types/*` packages are build-time tools. If `NODE_ENV=production` is set for the
+build — Render's Node runtime tends to, and it is easy to add by hand — npm reads
+that as `omit=dev` and prunes them, and the build fails with:
+
+```
+Cannot find module '@tailwindcss/postcss'
+```
+
+which reads like a missing dependency rather than a pruned one. Measured on this
+project: `NODE_ENV=production npm ci` removes **246 packages**; adding
+`--include=dev` removes none. The flag overrides `NODE_ENV`, so the build is
+correct either way.
 
 **Region matters.** Every page render makes server-to-server calls to the
 backend, so a cross-region hop is paid on *every request*, not once.
@@ -85,6 +100,13 @@ Service → **Environment**:
 | `NODE_VERSION` | `22` |
 
 `PORT` is injected by Render. Do not set it.
+
+**Do not set `NODE_ENV` either.** Next sets it itself — `next build` and
+`next start` default it to `production`, `next dev` to `development`
+(`node_modules/next/dist/bin/next`, the `preAction` hook), so the httpOnly
+cookie's `secure` flag is on in a deploy with nobody declaring it. Setting it
+explicitly gains nothing and breaks the build, because a Render variable applies
+to the build too and npm turns it into `omit=dev`.
 
 `BACKEND_URL` must be present **at build time**, not just at runtime — Next
 evaluates it while collecting route configuration. Render exposes environment
@@ -152,6 +174,7 @@ registration seeds 19 default categories for the new account.
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | Build fails: `BACKEND_URL is not set` | The variable is missing from the service environment | Add it. This failure is deliberate — see step 3 |
+| Build fails: `Cannot find module '@tailwindcss/postcss'` | `NODE_ENV=production` was set for the build, so `npm ci` pruned devDependencies — which is where the whole build toolchain lives | Use `npm ci --include=dev`, and do not set `NODE_ENV` as a service variable. If you created the service **by hand**, fix the Build Command in the dashboard — `render.yaml` does not apply to it |
 | Build fails in `npm ci`: lockfile out of sync | `package.json` was edited without updating `package-lock.json` | Run `npm install` locally, commit the lockfile |
 | Every page shows an error; logs show `ECONNREFUSED 127.0.0.1:8080` | An older build with the `localhost` fallback still deployed | Redeploy. The fallback now only applies outside production |
 | First page load takes ~50s, then works | The **backend** free instance was asleep and had to cold start | Expected. Paid backend, or accept it |

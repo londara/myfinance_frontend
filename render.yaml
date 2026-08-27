@@ -26,7 +26,17 @@ services:
     # `npm ci` not `npm install`: it installs exactly what package-lock.json
     # pins and fails if the lockfile and package.json disagree, so a deploy can
     # never quietly resolve a different dependency tree than the one tested.
-    buildCommand: npm ci && npm run build
+    #
+    # `--include=dev` is REQUIRED, not defensive. Building a Next app needs its
+    # devDependencies — tailwindcss, @tailwindcss/postcss, typescript, @types/*
+    # are all build-time tools. If anything sets NODE_ENV=production for the
+    # build, npm resolves `omit=dev` and drops them, and the build dies with:
+    #
+    #     Cannot find module '@tailwindcss/postcss'
+    #
+    # which reads like a missing dependency rather than a pruned one. The flag
+    # wins over NODE_ENV, so the build is correct either way.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
 
     # Answered by src/app/api/health/route.ts, which deliberately does NOT call
@@ -46,9 +56,15 @@ services:
       - key: NODE_VERSION
         value: "22"
 
-      # Next.js needs this to know it is a production build at runtime. Render
-      # sets it for Node services already; being explicit makes the httpOnly
-      # cookie's `secure` flag (session.ts) a stated decision rather than an
-      # inherited default, because it is what switches the flag on.
-      - key: NODE_ENV
-        value: production
+# DO NOT add NODE_ENV=production here.
+#
+# It was here, and it broke the build. A Render environment variable applies to
+# the build as well as the runtime, and npm reads NODE_ENV=production as
+# `omit=dev` — so `npm ci` pruned 246 packages including the whole build
+# toolchain, and the build failed on `Cannot find module '@tailwindcss/postcss'`.
+#
+# It is also unnecessary. Next sets NODE_ENV itself: `next start` and
+# `next build` default it to "production", `next dev` to "development"
+# (node_modules/next/dist/bin/next, the `preAction` hook). So the httpOnly
+# cookie's `secure` flag in src/lib/api/session.ts is on in a deploy without
+# anyone declaring it.
