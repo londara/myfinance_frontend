@@ -54,6 +54,7 @@ function refreshLedgerViews() {
   revalidatePath(routes.budgets);   // spend against limit moved
   revalidatePath(routes.reports);   // every aggregate moved
   revalidatePath(routes.settings);  // account balances are shown there
+  revalidatePath(routes.goals);     // an expense can fund a goal, moving its progress
 }
 
 /* ---------------------------------------------------------- transactions -- */
@@ -66,6 +67,15 @@ export type TransactionInput = {
   accountId: string;
   categoryId?: string;
   notes?: string;
+  /**
+   * Optional goal this expense funds.
+   *
+   * Sent with the transaction rather than posted separately to
+   * `/api/goals/{id}/contributions`, so the ledger row and the contribution are written in one
+   * database transaction. Two calls would leave an orphaned expense behind any failure between
+   * them, and nothing would reconcile it. Only valid when `expense` is true.
+   */
+  goalId?: string;
 };
 
 export async function createTransaction(

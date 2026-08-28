@@ -7,6 +7,7 @@ import { AddTransactionDialog } from "@/components/modals/add-transaction-dialog
 import {
   getAccounts,
   getCategories,
+  getGoals,
   getMe,
   getNotifications,
 } from "@/lib/api/queries";
@@ -21,14 +22,24 @@ import {
  * `loading.tsx` boundary rather than to add a client-side cache here.
  */
 export async function TopBar() {
-  const [me, notifications, accounts, categories] = await Promise.all([
+  const [me, notifications, accounts, categories, goals] = await Promise.all([
     getMe(),
     getNotifications(20),
     getAccounts(),
     getCategories(),
+    getGoals(),
   ]);
 
   const active = accounts.filter((account) => account.active);
+
+  /*
+   * Archived goals are dropped, reached ones are kept.
+   *
+   * An archived goal is one the user has put away — offering it as a destination would resurrect
+   * it by surprise. A reached goal is different: people do keep saving past a target, and the
+   * backend already handles the overshoot (percent goes above 100 and the status stays REACHED).
+   */
+  const fundableGoals = goals.filter((goal) => goal.status !== "ARCHIVED");
 
   return (
     <header className="sticky top-0 z-40 flex w-full items-center justify-between gap-4 bg-background px-gutter py-stack-md md:pr-edge">
@@ -38,7 +49,11 @@ export async function TopBar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-        <AddTransactionDialog accounts={active} categories={categories} />
+        <AddTransactionDialog
+          accounts={active}
+          categories={categories}
+          goals={fundableGoals}
+        />
 
         <ThemeToggle />
 

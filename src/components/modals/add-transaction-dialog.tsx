@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { createTransaction } from "@/lib/actions/finance";
-import type { Account, Category } from "@/lib/api/types";
+import type { Account, Category, Goal } from "@/lib/api/types";
+import { currency } from "@/lib/format";
 
 /** Today, as the yyyy-mm-dd a date input and the backend both expect. */
 function todayIso() {
@@ -26,10 +27,13 @@ function todayIso() {
 export function AddTransactionDialog({
   accounts,
   categories,
+  goals,
   trigger,
 }: {
   accounts: Account[];
   categories: Category[];
+  /** Goals an expense may contribute to. Empty hides the field entirely. */
+  goals: Goal[];
   trigger?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -37,6 +41,53 @@ export function AddTransactionDialog({
   const [kind, setKind] = useState<"expense" | "income">("expense");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+
+  /*
+   * The account and amount are tracked here, unlike every other field in this dialog.
+   *
+   * The rest stay uncontrolled and are read from FormData at submit, which is less code. These two
+   * cannot: the overspend warning has to appear while the user types, which means their values must
+   * be known before submit. FormData is still what the submit handler reads, so there is one source
+   * of truth for what gets sent.
+   */
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
+  const [amountText, setAmountText] = useState("");
+  const [goalId, setGoalId] = useState("");
+
+  const account = accounts.find((candidate) => candidate.id === accountId) ?? accounts[0];
+
+  /*
+   * A credit card is a debt, so its balance is meant to go negative — the seeded Amex starts below
+   * zero. Constraining it would make the card unchargeable the moment it carried any balance. The
+   * right ceiling for one is a credit limit, which this schema has no column for.
+   */
+  const onCredit = account?.kind === "CREDIT_CARD";
+  const available = account?.balance ?? 0;
+  const typedAmount = Number(amountText);
+
+  const overspends =
+    kind === "expense" &&
+    account !== undefined &&
+    !onCredit &&
+    Number.isFinite(typedAmount) &&
+    typedAmount > available;
+
+  const selectedGoal = goals.find((goal) => goal.id === goalId);
+
+  const overspendMessage = overspends
+    ? `${currency(typedAmount)} is more than ${account.name} holds (${currency(available)}).`
+    : undefined;
+
+  /** Clears the two tracked fields so a reopened dialog does not show the last attempt. */
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      setAmountText("");
+      setAccountId(accounts[0]?.id ?? "");
+      setGoalId("");
+      setFieldErrors({});
+    }
+  }
 
   /*
    * The category list is filtered by the tab, because the backend keeps one categories table with a
@@ -72,6 +123,19 @@ export function AddTransactionDialog({
       return;
     }
 
+    /*
+     * Re-checked at submit, not only in the derived state above.
+     *
+     * The submit button is disabled while `overspends` holds, but a disabled button is a UI
+     * affordance rather than a guarantee: a form can still be submitted by Enter in some browsers,
+     * and by anything scripted. The backend rejects it regardless — this branch exists so the user
+     * gets the message on the field instead of a toast.
+     */
+    if (overspends && overspendMessage) {
+      setFieldErrors({ amount: overspendMessage });
+      return;
+    }
+
     startTransition(async () => {
       const categoryId = String(formData.get("categoryId") ?? "");
 
@@ -85,13 +149,20 @@ export function AddTransactionDialog({
         accountId: String(formData.get("accountId")),
         categoryId: categoryId || undefined,
         notes: String(formData.get("notes") ?? "") || undefined,
+        // Only ever sent for an expense: the backend rejects a goal on income, because income is
+        // money arriving rather than money set aside.
+        goalId: kind === "expense" && goalId ? goalId : undefined,
       });
 
       if (result.ok) {
         setFieldErrors({});
         setOpen(false);
+        const fundedGoal = goals.find((goal) => goal.id === goalId);
         toast.success(kind === "expense" ? "Expense recorded" : "Income recorded", {
-          description: result.data.description,
+          description:
+            kind === "expense" && fundedGoal
+              ? `${result.data.description} — contributed to ${fundedGoal.name}`
+              : result.data.description,
         });
         router.refresh();
       } else {
@@ -102,7 +173,7 @@ export function AddTransactionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
@@ -116,7 +187,7 @@ export function AddTransactionDialog({
       <FormDialogContent
         title="Add Transaction"
         submitLabel={pending ? "Saving…" : "Save Transaction"}
-        submitDisabled={pending}
+        submitDisabled={pending || overspends}
         submitIcon={pending ? <Loader2 className="animate-spin" /> : undefined}
         onSubmitData={onSubmit}
       >
@@ -131,7 +202,11 @@ export function AddTransactionDialog({
           </TabsList>
         </Tabs>
 
-        <Field label="Amount" htmlFor="tx-amount" error={fieldErrors.amount}>
+        <Field
+          label="Amount"
+          htmlFor="tx-amount"
+          error={fieldErrors.amount ?? overspendMessage}
+        >
           <div className="relative">
             <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant">
               $
@@ -143,6 +218,9 @@ export function AddTransactionDialog({
               step="0.01"
               min="0.01"
               placeholder="0.00"
+              value={amountText}
+              onChange={(event) => setAmountText(event.target.value)}
+              aria-invalid={overspends || undefined}
               className="tnum pl-7"
               required
             />
@@ -195,17 +273,65 @@ export function AddTransactionDialog({
           <select
             id="tx-account"
             name="accountId"
-            defaultValue={accounts[0]?.id}
+            value={accountId}
+            onChange={(event) => setAccountId(event.target.value)}
             className="h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-body-md outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             required
           >
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name} · {account.methodLabel}
+            {accounts.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name} · {option.methodLabel}
               </option>
             ))}
           </select>
+
+          {/*
+            States the balance the expense is measured against. Without it the limit is invisible
+            until it is hit, which reads as the form breaking rather than as a rule.
+          */}
+          {account && kind === "expense" ? (
+            <p className="mt-1.5 text-label-md text-on-surface-variant">
+              {onCredit
+                ? "Credit card — charges are not limited by the balance."
+                : `Available: ${currency(available)}`}
+            </p>
+          ) : null}
         </Field>
+
+        {/*
+          Expense only, and hidden when there are no goals.
+
+          This is what makes a goal fundable at all: a goal's progress is the sum of its
+          contributions, so without a way to record one, every goal sits at 0% forever. Attaching it
+          to the expense that paid for it — rather than a separate "add contribution" form — means
+          the money is only ever counted once, in the ledger, and the goal reads its progress from
+          there instead of holding a second copy of the truth.
+        */}
+        {kind === "expense" && goals.length > 0 ? (
+          <Field label="Contribute to Goal (Optional)" htmlFor="tx-goal">
+            <select
+              id="tx-goal"
+              value={goalId}
+              onChange={(event) => setGoalId(event.target.value)}
+              className="h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-body-md outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <option value="">None</option>
+              {goals.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.name} — {currency(goal.saved)} of {currency(goal.target)}
+                </option>
+              ))}
+            </select>
+
+            {selectedGoal ? (
+              <p className="mt-1.5 text-label-md text-on-surface-variant">
+                {`Adds to ${selectedGoal.name}: ${currency(selectedGoal.saved)} → ${currency(
+                  selectedGoal.saved + (Number.isFinite(typedAmount) ? Math.max(typedAmount, 0) : 0),
+                )} of ${currency(selectedGoal.target)}`}
+              </p>
+            ) : null}
+          </Field>
+        ) : null}
 
         <Field label="Notes" htmlFor="tx-notes">
           <Textarea
