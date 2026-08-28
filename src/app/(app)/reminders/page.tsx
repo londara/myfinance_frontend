@@ -8,6 +8,7 @@ import {
   getCategories,
   getGroupedReminders,
   getReminderCalendar,
+  getReminderRules,
 } from "@/lib/api/queries";
 
 export const metadata: Metadata = { title: "Reminders" };
@@ -32,11 +33,14 @@ export default async function RemindersPage({ searchParams }: PageProps<"/remind
   const safeYear = Number.isInteger(year) && year > 1970 && year < 2200 ? year : today.getFullYear();
   const safeMonth = Number.isInteger(month) && month >= 1 && month <= 12 ? month : today.getMonth() + 1;
 
-  const [occurrences, grouped, accounts, categories] = await Promise.all([
+  const [occurrences, grouped, accounts, categories, rules] = await Promise.all([
     getReminderCalendar(safeYear, safeMonth),
     getGroupedReminders(),
     getAccounts(),
     getCategories("BILL"),
+    // The rules themselves, so each occurrence row's menu can populate an edit form. An occurrence
+    // carries only its reminderId and name.
+    getReminderRules(),
   ]);
 
   return (
@@ -55,7 +59,12 @@ export default async function RemindersPage({ searchParams }: PageProps<"/remind
         </div>
 
         <div className="lg:col-span-4">
-          <ReminderGroups grouped={grouped} />
+          <ReminderGroups
+            grouped={grouped}
+            rules={rules}
+            accounts={accounts}
+            categories={categories}
+          />
         </div>
       </div>
     </div>

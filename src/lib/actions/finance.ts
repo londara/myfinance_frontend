@@ -279,6 +279,27 @@ export async function payOccurrence(
   }
 }
 
+/**
+ * PUT /api/reminders/{id}.
+ *
+ * The backend re-materialises the future unpaid dates from the new schedule, so an edit moves every
+ * upcoming occurrence — that is why this invalidates the ledger views as well as the reminders page:
+ * the dashboard's Upcoming Payments panel reads the same occurrences.
+ */
+export async function updateReminder(
+  id: string,
+  input: ReminderInput,
+): Promise<ActionResult<ReminderRule>> {
+  try {
+    const updated = await api.put<ReminderRule>(`/api/reminders/${id}`, input);
+    revalidatePath(routes.reminders);
+    revalidatePath(routes.dashboard);
+    return { ok: true, data: updated };
+  } catch (error) {
+    return failure(error, "Could not update the reminder.");
+  }
+}
+
 export async function deleteReminder(id: string): Promise<ActionResult> {
   try {
     await api.delete(`/api/reminders/${id}`);

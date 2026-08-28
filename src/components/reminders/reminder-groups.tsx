@@ -5,11 +5,18 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ReminderCardActions } from "@/components/reminders/reminder-card-actions";
 import { Money } from "@/components/shared/money";
 import { StatusChip, statusTone } from "@/components/shared/status-chip";
 import { Button } from "@/components/ui/button";
 import { payOccurrence } from "@/lib/actions/finance";
-import type { GroupedOccurrences, ReminderOccurrence } from "@/lib/api/types";
+import type {
+  Account,
+  Category,
+  GroupedOccurrences,
+  ReminderOccurrence,
+  ReminderRule,
+} from "@/lib/api/types";
 import { longDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +26,24 @@ import { cn } from "@/lib/utils";
  * <p>The grouping is done by the backend against today's date, not stored — "Due Tomorrow" stops
  * being true tomorrow. This component just renders whichever buckets came back non-empty.
  */
-export function ReminderGroups({ grouped }: { grouped: GroupedOccurrences }) {
+export function ReminderGroups({
+  grouped,
+  rules,
+  accounts,
+  categories,
+}: {
+  grouped: GroupedOccurrences;
+  /**
+   * The rules behind the occurrences, for the row menus.
+   *
+   * An occurrence only carries `reminderId` and `name`, so the edit dialog cannot be populated
+   * from a row alone — the amount, schedule and account all live on the rule.
+   */
+  rules: ReminderRule[];
+  accounts: Account[];
+  categories: Category[];
+}) {
+  const rulesById = new Map(rules.map((rule) => [rule.id, rule]));
   const groups = [
     { title: "Due Tomorrow", tone: "critical" as const, items: grouped.dueTomorrow },
     { title: "Next Week", tone: "neutral" as const, items: grouped.nextWeek },
@@ -61,6 +85,9 @@ export function ReminderGroups({ grouped }: { grouped: GroupedOccurrences }) {
                 key={occurrence.id}
                 occurrence={occurrence}
                 urgent={group.tone === "critical"}
+                rule={rulesById.get(occurrence.reminderId)}
+                accounts={accounts}
+                categories={categories}
               />
             ))}
           </ul>
@@ -73,9 +100,16 @@ export function ReminderGroups({ grouped }: { grouped: GroupedOccurrences }) {
 function OccurrenceRow({
   occurrence,
   urgent,
+  rule,
+  accounts,
+  categories,
 }: {
   occurrence: ReminderOccurrence;
   urgent: boolean;
+  /** Absent only if the rule vanished between the two reads; the menu is then hidden. */
+  rule?: ReminderRule;
+  accounts: Account[];
+  categories: Category[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -104,8 +138,18 @@ function OccurrenceRow({
   return (
     <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-title-md text-brand">{occurrence.name}</span>
-        <Money value={occurrence.amount} className="font-semibold text-on-surface" />
+        <span className="min-w-0 truncate text-title-md text-brand">{occurrence.name}</span>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <Money value={occurrence.amount} className="font-semibold text-on-surface" />
+          {rule ? (
+            <ReminderCardActions
+              reminder={rule}
+              accounts={accounts}
+              categories={categories}
+            />
+          ) : null}
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-3">
